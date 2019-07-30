@@ -179,6 +179,136 @@ Not every user with an account on the linux system has access to the FTP server.
 
 The /etc/vsftpd/ftpusers file always includes users who are denied access to the server.This settings take precedence to the /etc/vsftpd/user_list file.
 
+-------------------------------------------------------------- 
+### 4. Configuring the vsftpd for the internet : 
+
+You can lockdown the server by limiting it to only allow downloads and only from annonymous users inorder to safely share files from the FTP server over the internet.
+Back up your current `/etc/vsftpd/vsftpd.conf` file 
+
+```bash 
+$ sudo cp -ra /etc/vsftpd/vsftpd.conf   Documents/back_up_/vsftp_backup.conf
+```
+
+After the backup, overwrite  `/etc/vsftpd/vsftpd.conf` file with ` /usr/share/doc/vsftpd-*/EXAMPLE/INTERNET_SITE/vsftpd.conf`
+```bash
+sudo cp -ra  /usr/share/doc/vsftpd-3.0.2/EXAMPLE/INTERNET_SITE/vsftpd.conf   /etc/vsftpd/vsftpd.conf
+```
+Depending on what your preference is, you can edit the configuration file further if it soothes your preference but mine was left as the above.
+
+-------------------------------------------------------------- 
+### 5. Configuring CentOS as a router : 
+
+Provided you have more than one network interface card (NIC) on a Linux computer, you can configure it to serve as a virtual router.All that is needed is a change to one kernel parameter `ip_forward` that allows packet forwarding.
+For immediate and temporal turning on of the ip_forward parameter , type the following commands as root:
+```bash
+# echo 1 > /proc/sys/net/ipv4/ip_forward
+# cat /proc/sys/net/ipv4/ip_forward
+ 1
+```
+Inorder to make this change permanent upon system reboot, you must add that value to the /etc/sysctl.conf file, so that it looks like:
+`net.ipv4.ip_forward = 1`
+After tuning the Linux system to be used as a router, it can also serve the purpose of a firewall between a private network and a public network like the internet.
+
+|  System            |Specification 
+| ----------         | ------ |
+| Operating System   | CentOS 7 |
+| Hostname           | localhost |
+| Private Interface  | enp0s25 |
+| Public Interface   | wls1 |
+
+The interface connected to our local network is called `private` while the interface connected to the internet or the outer network is called `public` interface.
+
+### Configure the Private interface:
+
+first check the status of the network interface.
+```bash
+$ nmcli device status
+DEVICE      TYPE      STATE        CONNECTION 
+virbr0      bridge    connected    virbr0     
+enp0s25     ethernet  unavailable  --         
+wls1        wifi      unavailable  --         
+lo          loopback  unmanaged    --         
+virbr0-nic  tun       unmanaged    --   
+
+```
+Configure `Private` Interface with necessary settings for the Router setup.
+```bash
+# nmcli connection add con-name prv0 ifname enp0s25 type ethernet autoconnect yes ip4 192.168.113.10/24 gw4 192.168.113.10
+Connection 'prv0' (*) successfully added.
+# nmcli connection modify prv0 ipv4.method manual ipv4.dns 192.168.113.10 ipv6.method ignore
+# nmcli connection modify prv0 ipv4.never-default yes
+# nmcli connection modify prv0 connection.zone internal
+# nmcli connection down prv0 ; nmcli connection up prv0
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+```
+### Configure Public Interface:
+Check status of network devices.
+```bash
+# nmcli device status
+DEVICE      TYPE      STATE        CONNECTION 
+virbr0      bridge    connected    virbr0     
+enp0s25     ethernet  connected    prv0        
+wls1        wifi      unavailable  --         
+lo          loopback  unmanaged    --         
+virbr0-nic  tun       unmanaged    --   
+```
+Configure `Public` Interface with necessary settings for the Router setup.
+```bash
+# nmcli connection add con-name pub0 ifname wls1 type wifi autoconnect yes ssid none ip4 10.176.143.124/16 gw4 10.176.127.1
+# nmcli connection modify pub0 ipv4.method auto ipv4.dns 10.176.85.20 ipv6.method ignore
+# nmcli connection modify pub0 connection.zone external
+# nmcli connection down pub0 ; nmcli connection up pub0
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+```
+### Configure Firewall:
+
+```bash
+# firewall-cmd --set-default-zone=internal
+success
+```
+Check status of Firewall.
+```bash
+# firewall-cmd --list-all
+
+internal
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s25
+  sources: 
+  services: ssh mdns samba-client dhcpv6-client
+  ports: 
+  protocols: 
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+
+
+# firewall-cmd --list-all --zone=external
+
+external (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: wls1
+  sources: 
+  services: ssh
+  ports: 
+  protocols: 
+  masquerade: yes
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+
+```
+Connect to a client machine client2.localhost in your private network and set the default gateway as follows.
+```bash
+[client2@localhost ~]# nmcli c a con-name prv0 ifname enp0s25 autoconnect yes type ethernet ip4 192.168.113.11/24 ipv4.dns 192.168.122.10 gw4 192.168.113.10
+```
+Use the google default dns server ip 8.8.8.8 as an alternative to the dns server 192.168.122.10 ip you already provideded .
+
+
 
 **Blinks**  
 - Annoymous is a special non -authenticated account used by the FTP server. This account can be accessed by anyone because it doesn't require a valid password.
@@ -195,7 +325,7 @@ The /etc/vsftpd/ftpusers file always includes users who are denied access to the
 							
 + Negus, N.  2015: Linux Bible(9th edition). Indianapolis, Indiana: John Wiley & Sons Inc., pp. 347-375,477-497,708-713.
 
-+ 2018, https://ahmermansoor.blogspot.com/2018/08/setup-linux-machine-as-router.html (accessed July 30,2019).
++ 2018, [Ahmer's SysAdmin Recipes ](https://ahmermansoor.blogspot.com/2018/08/setup-linux-machine-as-router.html (accessed July 30,2019)) .
 
 
  							
