@@ -100,7 +100,7 @@ if the text *"Hi From my New FTP Server"* appears in the web browser, the vsftpd
 
 
 -------------------------------------------------------------- 
-### 3. Securing the ftp server : 
+### 3. Securing the ftp server  
 A firwall may prevent your vsftpd FTP srver from fully being accessibele
 
 **Opening up your firewall for FTP**
@@ -180,7 +180,7 @@ Not every user with an account on the linux system has access to the FTP server.
 The /etc/vsftpd/ftpusers file always includes users who are denied access to the server.This settings take precedence to the /etc/vsftpd/user_list file.
 
 -------------------------------------------------------------- 
-### 4. Configuring the vsftpd for the internet : 
+### 4. Configuring the vsftpd for the internet  
 
 You can lockdown the server by limiting it to only allow downloads and only from annonymous users inorder to safely share files from the FTP server over the internet.
 Back up your current `/etc/vsftpd/vsftpd.conf` file 
@@ -196,7 +196,7 @@ sudo cp -ra  /usr/share/doc/vsftpd-3.0.2/EXAMPLE/INTERNET_SITE/vsftpd.conf   /et
 Depending on what your preference is, you can edit the configuration file further if it soothes your preference but mine was left as the above.
 
 -------------------------------------------------------------- 
-### 5. Configuring CentOS as a router : 
+### 5. Configuring CentOS as a router
 
 Provided you have more than one network interface card (NIC) on a Linux computer, you can configure it to serve as a virtual router.All that is needed is a change to one kernel parameter `ip_forward` that allows packet forwarding.
 For immediate and temporal turning on of the ip_forward parameter , type the following commands as root:
@@ -308,6 +308,20 @@ Connect to a client machine client2.localhost in your private network and set th
 ```
 Use the google default dns server ip 8.8.8.8 as an alternative to the dns server 192.168.122.10 ip you already provideded .
 
+-------------------------------------------------------------- 
+### 6. Accessing the FTP Server from firefox or with the lftp command
+Browsers such as firefox provide an easy interface to connect to the FTP server especially if you simply want to do an anonymous download.For further interactions between the FTP client and the server , using command-line FTP clients is most preferable.
+
+To install lftp command type the following:
+```bash
+# yum install lftp
+```
+You will be connected to the FTP server as anonymous user if you use the lftp command with just the name of the FTP server you are trying to access.
+By adding the -u username , you can type the user's password when prompted and gain access to the FTP server as the user you logged in as.
+Once authenticated, an lftp prompt appears for you to start typing commands hence making connection to the server. Using the get and the put commands, you can use them to download and upload files respectively. Other Linux user commands such as pwd, ls and etc can still run on the lftp prompt. To have the  commands you run interpreted by the client system, you will need to put an exclamation mark(!) infront of the command before running it.
+You can use the get and the put command to download and upload files respectively depending on your permission to a file or directory.
+
+**NB** There are also some dedicated graphical FTP clients that can be used such as gFTP, WinSCP,  Free FTP and filezilla.
 
 
 **Blinks**  
