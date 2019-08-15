@@ -185,7 +185,7 @@ local_enable=YES
 
 Not every user with an account on the linux system has access to the FTP server. The setting *userlist\_enable=YES* in vsftpd.conf mean to deny access to the FTP server for all accounts listed in the /etc/vsftpd/user\_list file.
 
-The /etc/vsftpd/ftpusers file always includes users who are denied access to the server.This settings take precedence to the /etc/vsftpd/user_list file.
+The `/etc/vsftpd/ftpusers` file always includes users who are denied access to the server.This settings take precedence to the /etc/vsftpd/user_list file.
 
 -------------------------------------------------------------- 
 ### 4. Configuring the vsftpd for the internet  
