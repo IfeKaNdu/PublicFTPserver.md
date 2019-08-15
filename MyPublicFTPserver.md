@@ -1,6 +1,6 @@
-### Setting up a Public FTP server on CentOS 7 with virtual router implementation.
+### Setting up a Public FTP server over SSH on CentOS 7 with virtual router implementation.
 
-Requirements: CentOS 7 on a computer with two or more NICs , firefox web browser, vsftpd package , iftp .
+Requirements: CentOS 7 on a computer with two or more NICs , firefox web browser, vsftpd package , iftp ,ssh.
 
 In this article, we will look into the following:
 
@@ -9,16 +9,15 @@ In this article, we will look into the following:
 3. Securing the FTP server.
 4. Configuring the vsftpd for the internet.
 5. Configuring CentOS as a router.
-6. Accessing the FTP server from the internet.
-7. Accessing the FTP server with the lftp command.
-
+6. Accessing the FTP server with the lftp command.
+7. Accessing files securely over SSH with sftp.
 -------------------------------------------------------------- 
 
 ### 1. The vsftpd FTP server installation
 
 For making files freely availble over networks especially the internet, FTP is mostly used.FTP operates in a client /Server model. A client if authenticated can interatively traverse the filesystem,list files and directories and then download (and sometimes upload) files.
 
-**NB** FTP is insecure because everything sent between the FTP client and server is done in clear text. Inorder words , it's not good for sharing files privately. For private encrypted file sharing,use SSH commands like sftp,scp or rsync.However for open source software repositories , public documents or some openly available data sharing , FTP is still the best choice.
+**NB** FTP is insecure because everything sent between the FTP client and server is done in clear text. Inorder words , it's not good for sharing files privately. For private encrypted file sharing,use SSH commands like lftp,scp or rsync.However for open source software repositories , public documents or some openly available data sharing , FTP is still the best choice.
 
 ###### Type the following commands as root to install the vsftpd package 
 ```bash
@@ -53,7 +52,7 @@ Before starting the vsftpd service, check whether it is running already.
 
 ```bash 
 # systemctl status vsftpd.service
- ● vsftpd.service - Vsftpd ftp daemon
+ ● vsftpd.service - vsftpd ftp daemon
    Loaded: loaded (/usr/lib/systemd/system/vsftpd.service; enabled; vendor preset: disabled)
    Active: inactive (dead) since Tue 2019-07-30 04:00:16 GMT; 5s ago
   Process: 1656 ExecStart=/usr/sbin/vsftpd /etc/vsftpd/vsftpd.conf (code=exited, status=0/SUCCESS)
@@ -69,7 +68,7 @@ Before starting the vsftpd service, check whether it is running already.
  ```
 ```bash 
   systemctl status vsftpd.service
-  ● vsftpd.service - Vsftpd ftp daemon
+  ● vsftpd.service - vsftpd ftp daemon
    Loaded: loaded (/usr/lib/systemd/system/vsftpd.service; enabled; vendor preset: disabled)
    Active: active (running) since Tue 2019-07-30 04:04:31 GMT; 12s ago
   Process: 17058 ExecStart=/usr/sbin/vsftpd /etc/vsftpd/vsftpd.conf (code=exited, status=0/SUCCESS)
@@ -101,7 +100,7 @@ if the text *"Hi From my New FTP Server"* appears in the web browser, the vsftpd
 
 -------------------------------------------------------------- 
 ### 3. Securing the ftp server  
-A firwall may prevent your vsftpd FTP srver from fully being accessibele
+A firwall may prevent your vsftpd FTP server from fully being accessibele
 
 **Opening up your firewall for FTP**
 
@@ -130,9 +129,9 @@ vsftpd: ALL: ALLOW
 ```
 The line above allows all remote systems to connect to the FTP service vsftpd while changing it to.
 ```bash
-vsftpd:199:171:189 
+vsftpd:192:158:238 
 ```
-The line above allows a remote client numeric IP address 199:171:189 only, to access the ftpd services.
+The line above allows a remote client numeric IP address 192:158:238  only, to access the ftpd services.
 The /etc/hosts.deny file describes names of the hosts which are not allowed to use the ftpd services 
 ```bash
 ALL:ALL
@@ -143,6 +142,15 @@ The above line in the /etc/hosts.deny file will deny access to all remote system
 
 **Configuring SELinux for your FTP Server:**
 
+FTP server features that are considered insecure by SELinux have Booleans that let you allow or disallow those features such as   
++ To allow regular users to be able to authenticate and read and write files and directories via the FTP server,The Boolean ftp\_home_dir must be on.To turn it on permanently ,type this 
+```bash
+# setsebool -P ftp_home_dir on
+```
++ Turn on the `allow\_ftpd\_anon_write` Boolean for SELinux to allow anonymous users to read and write files and directories.
+```bash
+# setsebool -P allow_ftpd_anon_write on
+```
 If SELinux is in Enforcing mode , a few SELinux issues could cause the vsftpd server to not behave as you would like.Check the state of SELinux on your system. 
 
 ```bash
@@ -186,12 +194,12 @@ You can lockdown the server by limiting it to only allow downloads and only from
 Back up your current `/etc/vsftpd/vsftpd.conf` file 
 
 ```bash 
-$ sudo cp -ra /etc/vsftpd/vsftpd.conf   Documents/back_up_/vsftp_backup.conf
+$ sudo cp -ra /etc/vsftpd/vsftpd.conf   Documents/back_up_/vlftp_backup.conf
 ```
 
 After the backup, overwrite  `/etc/vsftpd/vsftpd.conf` file with ` /usr/share/doc/vsftpd-*/EXAMPLE/INTERNET_SITE/vsftpd.conf`
 ```bash
-sudo cp -ra  /usr/share/doc/vsftpd-3.0.2/EXAMPLE/INTERNET_SITE/vsftpd.conf   /etc/vsftpd/vsftpd.conf
+$ sudo cp -ra  /usr/share/doc/vsftpd-3.0.2/EXAMPLE/INTERNET_SITE/vsftpd.conf   /etc/vsftpd/vsftpd.conf
 ```
 Depending on what your preference is, you can edit the configuration file further if it soothes your preference but mine was left as the above.
 
@@ -205,7 +213,7 @@ For immediate and temporal turning on of the ip_forward parameter , type the fol
 # cat /proc/sys/net/ipv4/ip_forward
  1
 ```
-Inorder to make this change permanent upon system reboot, you must add that value to the /etc/sysctl.conf file, so that it looks like:
+Inorder to make this change permanent upon system reboot, you must add that value to the `/etc/sysctl.conf` file, so that it looks like:
 `net.ipv4.ip_forward = 1`
 After tuning the Linux system to be used as a router, it can also serve the purpose of a firewall between a private network and a public network like the internet.
 
@@ -304,7 +312,7 @@ external (active)
 ```
 Connect to a client machine client2.localhost in your private network and set the default gateway as follows.
 ```bash
-[client2@localhost ~]# nmcli c a con-name prv0 ifname enp0s25 autoconnect yes type ethernet ip4 192.168.113.11/24 ipv4.dns 192.168.122.10 gw4 192.168.113.10
+[client2@localhost ~]# nmcli c a con-name prv0 ifname enp0s25 autoconnect yes type ethernet ip4 192.168.113.11/24 ipv4.dns 192.168.113.10 gw4 192.168.113.10
 ```
 Use the google default dns server ip 8.8.8.8 as an alternative to the dns server 192.168.122.10 ip you already provideded .
 
@@ -332,7 +340,7 @@ You can use the get and the put command to download and upload files respectivel
 - On firefox, type the Url of the site you want to visit (such as ftp://egbuniwe.com) into the location box if no username or password is added like (ftp://username:MyPasswd5@egbuniwe.com), an annoymous connection is made and the contents of the user's home directory of the site are displayed.Once they are clicked, the files and directories are accessed.
             
             
-##### TO BE CONTINUED....
+
 							    
 							    
 #####                               References 
