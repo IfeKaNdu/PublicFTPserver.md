@@ -11,6 +11,7 @@ In this article, we will look into the following:
 5. Configuring CentOS as a router.
 6. Accessing the FTP server with the lftp command.
 7. Accessing files securely over SSH with sftp.
+8. Accessing your files via internet
 -------------------------------------------------------------- 
 
 ### 1. The vsftpd FTP server installation
@@ -331,6 +332,97 @@ You can use the get and the put command to download and upload files respectivel
 
 **NB** There are also some dedicated graphical FTP clients that can be used such as gFTP, WinSCP,  Free FTP and filezilla.
 
+### 7. Accessing files securely over SSH with sftp.
+
+The client and server software packages that contain the ssh tools are `openssh`,`openssh-clients`, and `openssh-server` packages, verify if installed:
+```bash
+[root@server ~]# yum list installed | grep ssh
+libssh2.x86_64                            1.4.3-12.el7_6.3           @updates   
+openssh.x86_64                            7.4p1-16.el7               @base      
+openssh-clients.x86_64                    7.4p1-16.el7               @base      
+openssh-server.x86_64                     7.4p1-16.el7               @base 
+```
+If not installed,install it:
+```bash
+[root@server ~]# yum install openssh
+```
+### Disable root password login and password authentication by setting the two to no
+```bash
+[root@server ~]# vim /etc/ssh/sshd_config
+PermitRootLogin no
+PasswordAuthentication no
+```
+### Reload sshd service
+```bash
+[root@server ~]# systemctl reload sshd.service
+```
+Still on the server create the user that will be accessing files from the server if it doesn't exist already:
+```bash
+[root@server ~]# useradd user1
+[root@server ~]# passwd user1
+```
+At the client machine Copy the ssh key from the client to the server (The user does not have to exist on the client)
+```bash
+[clientuser@client ~]$ ssh-copy-id user1@server
+```
+Verify the ssh key works correctly from the client
+```bash
+[clientuser@client ~]$ ssh user1@server
+[user1@server ~]$ exit
+logout
+Connection to server closed.
+[clientuser@client ~]$ 
+```
+Verify that your sftp connection works without a password prompt
+```bash
+[clientuser@client ~]$ sftp user1@server
+Connected to server
+sftp> quit
+[clientuser@client ~]$
+```
+User1 has full access and can ssh or sftp and change to any directory if no changes were made to the above illustration. 
+With the sftp command,interactive FTP-style session over SSH is created.Using sftp,you can connect to a remote system over SSH,change directories,list directory contents, and then (given proper  permission) get files from and put files on the server.
+The chroot user should rather be restricted .It is important to effect the necessary changes to chroot user1 and keep them jailed and locked down to a specified directory.
+
+At the server, create a new group to add all the jailed chroot users on the server.
+```bash
+[root@server ~]# groupadd sftpusers
+```
+Create a common directory for all of your jailed chroot users
+```bash
+[root@server ~]# mkdir /sftp
+
+Then create a subdirectory for each individual user that you want to chroot
+```bash
+[root@server ~]# mkdir /sftp/user1
+```
+Create the "home" directory for the user
+```bash
+[root@server ~]# mkdir /sftp/user1/home
+```
+Modify the user to add them to the new group you created
+```bash
+[root@server ~]# usermod -aG sftpusers user1
+```
+Change permission for the users chrooted "home" directory only. It's important to leave everything else with the default root permissions.
+```bash
+[root@server ~]# chown user1:sftpusers /sftp/user1/home/
+```
+Modify the /etc/ssh/sshd_config file and add the following lines:
+```bash
+[root@server ~]# vim /etc/ssh/sshd_config
+...
+Subsystem   sftp    internal-sftp -d /home
+Match Group sftpusers
+ChrootDirectory /sftp/%u
+...
+```
+
+Restart the sshd service
+```bash
+[root@server ~]# systemctl restart sshd
+```
+### 8 Accessing your files via internet
 
 **Blinks**  
 - Annoymous is a special non -authenticated account used by the FTP server. This account can be accessed by anyone because it doesn't require a valid password.
@@ -348,6 +440,8 @@ You can use the get and the put command to download and upload files respectivel
 + Negus, N.  2015: Linux Bible(9th edition). Indianapolis, Indiana: John Wiley & Sons Inc., pp. 347-375,477-497,708-713.
 
 + 2018, [Ahmer's SysAdmin Recipes ](https://ahmermansoor.blogspot.com/2018/08/setup-linux-machine-as-router.html (accessed July 30,2019)) .
+
++ 2018, [How to configure an sftp server with restricted chroot users with ssh keys  ](https://access.redhat.com/solutions/2399571 (accessed August 		15,2019)) .
 
 
  							
