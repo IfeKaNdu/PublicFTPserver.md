@@ -12,7 +12,7 @@ In this article, we will look into the following:
 6. Accessing the FTP server with the lftp command.
 7. Accessing files securely over SSH with sftp.
 8. Accessing your files via internet
--------------------------------------------------------------- 
+----------------------------------------------------------------------------------
 
 ### 1. The vsftpd FTP server installation
 
